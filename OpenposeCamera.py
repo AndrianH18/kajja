@@ -5,9 +5,9 @@ from typing import List
 import numpy as np
 
 def main():
-    openposeWebcam = OpenposeWebcam('http://192.168.31.157/stream.jpg')
+    openposeWebcam = OpenposeWebcam(0)
     openposeWebcam.run()
-
+    
 
 class OpenposeWebcam:
     BODY_PARTS = op.getPoseBodyPartMapping(op.BODY_25)
@@ -50,6 +50,12 @@ class OpenposeWebcam:
         self.CENTER_Y = self.CAMERA_RESOLUTION_HEIGHT//2
         self.frame_id = 0
         self.output = []
+        self.output_array = []
+        self.exercise = 'squat'
+        self.counter = 0
+        self.flag_max = False
+        self.flag_min = False 
+        self.angle_dev = 7 #in degrees
 
         
 
@@ -62,23 +68,135 @@ class OpenposeWebcam:
 
     def process_keypoints(self):
         network_output = self.datum.poseKeypoints
-        if type(network_output) == np.array:
+        self.image = self.datum.cvOutputData
+        if network_output.ndim:
             network_output = network_output[0]
-            output_array = []
+            self.output_array = []
             for i in range(len(network_output) - 1):
-                output_array.append(network_output[i][0])
-                output_array.append(network_output[i][1])
-            self.output.append(output_array)
+                self.output_array.append(np.array((network_output[i][0], network_output[i][1])))
+            self.output.append(self.output_array)
+        else:
+            self.image = cv2.putText(self.image, "No Pose detected", (int(0.75 *self.CAMERA_RESOLUTION_WIDTH), int(self.CAMERA_RESOLUTION_HEIGHT * 0.05)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        
+
+
+    def angle_list(self):
+        # Matching keypoints indices in the output of PoseNet
+        
+        # 0. Angle between right shoulder, left shoulder, and left elbow (2,5,6)
+        # 1. Angle between left shoulder, right shoulder, and right elbow (5,2,3)
+        # 2. Angle between left shoulder, elbow, and wrist (5,6,7)
+        # 3. Angle between right shoulder, elbow and wrist (2,3,4)
+        # 4. Angle between right shoulder, left shoulder, and left hip (2,5,12)
+        # 5. Angle between left shoudler, right shoulder, and right hip (5,2,9)
+        # 6. Angle between left shoulder, left hip, right hip (5,12,9)
+        # 7. Angle between right shoulder, right hip, left hip (2,9,12)
+        # 8. Angle between left shoulder, hip, knee (5,12,13)
+        # 9. Angle between right shoulder, hip, knee (2,9,10)
+        # 10. Angle between left hip, knee, angkle (12,13,14)
+        # 11. Angle between right hip, knee, angkle (9,10,11)
+
+        self.angle_values = []
+        index_to_compare = [(2,4,6), (5,2,3), (5,6,7), (2,3,4), (2,5,12), (5,2,9), (5,12,9), (2,9,12), (5,12,13),(2,9,10), (12,13,14), (9,10,11)]
+        for indexes in index_to_compare:
+            if len(self.output_array) != 0:
+                p1 = indexes[0]
+                pivot = indexes[1]
+                p2 = indexes[2]
+
+                angle = np.arccos(np.dot(self.output_array[p1]-self.output_array[pivot],self.output_array[p2]-self.output_array[pivot]) / (np.linalg.norm(self.output_array[pivot]-self.output_array[p1]) * np.linalg.norm(self.output_array[pivot]-self.output_array[p2])))
+                angle = np.degrees(angle)
+                self.angle_values.append(angle)
+        return self.angle_values
+    
+
+    def rep_counter(self):
+        self.attention = ""
+        self.image = cv2.putText(self.image, f"Exercise detected: {self.exercise}", (int(self.CAMERA_RESOLUTION_WIDTH * 0.01), int(self.CAMERA_RESOLUTION_HEIGHT * 0.05)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2, cv2.LINE_AA)
+        if self.exercise == 'dumbell-curl':
+            max_angle = 170
+            min_angle = 45
+            # Check if the movement is correct
+            if self.flag_max == True and self.flag_min== False:
+                self.attention = "Curl more!"
+                # print("Curl more!")
+            if abs(self.angle_values[3]-max_angle)<= self.angle_dev or abs(self.angle_values[2] -max_angle)<= self.angle_dev:
+                self.flag_max = True
+                self.flag_min = False
+            if abs(self.angle_values[3]-min_angle) <= self.angle_dev or abs(self.angle_values[2]-min_angle) <= self.angle_dev:
+                self.flag_min = True
+
+            # Set the counter
+            if self.flag_max and self.flag_min == True:
+                self.counter +=1
+                self.flag_max = False
+                self.flag_min = False
+        
+        elif self.exercise == 'push-up':
+            max_angle = 170
+            min_angle = 77
+
+             # Set the counter
+            if self.flag_max == True and self.flag_min == True:
+                self.attention = "Bend more"
+                self.counter += 1
+                self.flag_max = False
+                self.flag_min = False
+
+            # # Check if the hip is straight
+            # if abs(self.angle_values[6] - hip_angle) <= self.angle_dev or abs(self.angle_values[7]-hip_angle) <= self.angle_dev:
+            #     self.flag_hip = True
+            # if abs(self.angle_values[6] - hip_angle) > self.angle_dev or abs(self.angle_values[7]-hip_angle) > self.angle_dev:
+            #     self.flag_hip = False
+            #     print("Straighten your hip")
+
+            # Check if your movement is correct
+            if abs(self.angle_values[3]-max_angle)<= self.angle_dev or abs(self.angle_values[2] -max_angle)<= self.angle_dev:
+                self.flag_max = True
+                self.flag_min = False
+            if abs(self.angle_values[3]-min_angle) <= self.angle_dev or abs(self.angle_values[2]-min_angle) <= self.angle_dev:
+                self.flag_min = True
+
+        elif self.exercise == 'squat':
+            max_angle = 170
+            min_angle =  77
+            # Check if the movement is correct
+            if self.flag_max == True and self.flag_min== False:
+                self.attention = "Go Lower!"
+                # print("Go Lower!")
+            if abs(self.angle_values[10]-max_angle)<= self.angle_dev or abs(self.angle_values[11] -max_angle)<= self.angle_dev:
+                self.flag_max = True
+                self.flag_min = False
+            if abs(self.angle_values[10]-min_angle) <= self.angle_dev or abs(self.angle_values[11]-min_angle) <= self.angle_dev:
+                self.flag_min = True
+
+            # Set the counter
+            if self.flag_max and self.flag_min == True:
+                self.counter +=1
+                self.flag_max = False
+                self.flag_min = False
+        
+        self.image = cv2.putText(self.image, self.attention, (int(self.CAMERA_RESOLUTION_WIDTH * 0.01), int(self.CAMERA_RESOLUTION_HEIGHT * 0.15)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        self.image = cv2.putText(self.image, f"count: {self.counter}", (int(self.CAMERA_RESOLUTION_WIDTH * 0.01), int(self.CAMERA_RESOLUTION_HEIGHT * 0.1)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2, cv2.LINE_AA)
+        return self.counter
+        
+
+
 
 
     def run(self):
         while(cv2.waitKey(1) != ord('q')):
             self.capture_image()
             self.process_keypoints()
-            cv2.imshow("OpenPose", self.datum.cvOutputData)
+            self.angle_list()
+            self.rep_counter()
+            cv2.imshow("Output OpenPose", self.image)
+            # cv2.imshow("OpenPose", self.datum.cvOutputData)
         # output = np.array(self.output)
         # np.save('output.npy', output)        
     
 
 if __name__=='__main__':
     main()
+    
+    
