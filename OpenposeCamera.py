@@ -1,12 +1,16 @@
 import pyopenpose as op
 import cv2
 import argparse
+from typing import List
+import numpy as np
 
 def main():
     openposeWebcam = OpenposeWebcam()
     openposeWebcam.run()
 
+
 class OpenposeWebcam:
+    BODY_PARTS = op.getPoseBodyPartMapping(op.BODY_25)
     def __init__(self, src = 0):
             # Flags
         parser = argparse.ArgumentParser()
@@ -15,6 +19,7 @@ class OpenposeWebcam:
         # Custom Params (refer to include/openpose/flags.hpp for more parameters)
         self.params = dict()
         self.params['model_folder'] = "/openpose/models"
+        self.params['number_people_max'] = 1
 
         # Add others in path?
         for i in range(0, len(args[1])):
@@ -43,22 +48,31 @@ class OpenposeWebcam:
         self.CAMERA_RESOLUTION_HEIGHT = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.CENTER_X = self.CAMERA_RESOLUTION_WIDTH//2
         self.CENTER_Y = self.CAMERA_RESOLUTION_HEIGHT//2
+        self.frame_id = 0
 
         
 
     def capture_image(self):
         _, img = self.cap.read()
+        self.frame_id += 1
         # Process Image
         self.datum.cvInputData = img
         self.opWrapper.emplaceAndPop([self.datum])
 
-    # def get_keypoints(self):
-    #     self.datum.poseKeypoints
+    def process_keypoints(self):
+        
+        network_output = self.datum.poseKeypoints[0]
+        output_array = []
+        for i in range(len(network_output) - 1):
+            output_array.append(network_output[i][0])
+            output_array.append(network_output[i][1])
+        print(output_array)
+
 
     def run(self):
         while(cv2.waitKey(1) != ord('q')):
             self.capture_image()
-            # self.get_keypoints()
+            self.process_keypoints()
             cv2.imshow("OpenPose", self.datum.cvOutputData)
     
 
