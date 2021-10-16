@@ -5,7 +5,7 @@ from typing import List
 import numpy as np
 
 def main():
-    openposeWebcam = OpenposeWebcam()
+    openposeWebcam = OpenposeWebcam('http://192.168.31.157/stream.jpg')
     openposeWebcam.run()
 
 
@@ -49,6 +49,7 @@ class OpenposeWebcam:
         self.CENTER_X = self.CAMERA_RESOLUTION_WIDTH//2
         self.CENTER_Y = self.CAMERA_RESOLUTION_HEIGHT//2
         self.frame_id = 0
+        self.output = []
 
         
 
@@ -60,13 +61,14 @@ class OpenposeWebcam:
         self.opWrapper.emplaceAndPop([self.datum])
 
     def process_keypoints(self):
-        
-        network_output = self.datum.poseKeypoints[0]
-        output_array = []
-        for i in range(len(network_output) - 1):
-            output_array.append(network_output[i][0])
-            output_array.append(network_output[i][1])
-        print(output_array)
+        network_output = self.datum.poseKeypoints
+        if type(network_output) == np.array:
+            network_output = network_output[0]
+            output_array = []
+            for i in range(len(network_output) - 1):
+                output_array.append(network_output[i][0])
+                output_array.append(network_output[i][1])
+            self.output.append(output_array)
 
 
     def run(self):
@@ -74,6 +76,8 @@ class OpenposeWebcam:
             self.capture_image()
             self.process_keypoints()
             cv2.imshow("OpenPose", self.datum.cvOutputData)
+        # output = np.array(self.output)
+        # np.save('output.npy', output)        
     
 
 if __name__=='__main__':
