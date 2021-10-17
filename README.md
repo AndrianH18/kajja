@@ -37,6 +37,11 @@ Once you are inside the interactive terminal of the Docker container, run `Openp
 ```bash
 python3 OpenposeCamera.py
 ```
+You can also run it with the rule based method, run `OpenposeCamera_Rulebased.py`:
+```bash
+python3 OpenposeCamera_Rulebased.py
+```
+
 
 This assumes that the ESP32-CAM is up and running, and streaming camera image via WiFi.
 
