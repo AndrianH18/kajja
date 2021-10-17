@@ -3,9 +3,17 @@ import cv2
 import argparse
 from typing import List
 import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Conv1D
+from tensorflow.keras.layers import MaxPooling1D
+from tensorflow.keras.utils import to_categorical
 
 def main():
-    openposeWebcam = OpenposeWebcam(0)
+    openposeWebcam = OpenposeWebcam("http://192.168.31.214/stream.jpg")
     openposeWebcam.run()
     
 
@@ -56,7 +64,8 @@ class OpenposeWebcam:
         self.flag_max = False
         self.flag_min = False 
         self.angle_dev = 7 #in degrees
-
+        self.model =  load_model('detector/models/best.pb')
+        self.prediction = 'squat'
         
 
     def capture_image(self):
@@ -64,19 +73,20 @@ class OpenposeWebcam:
         self.frame_id += 1
         # Process Image
         self.datum.cvInputData = img
-        self.opWrapper.emplaceAndPop([self.datum])
+        self.opWrapper.emplaceAndPop(op.VectorDatum([self.datum]))
 
     def process_keypoints(self):
         network_output = self.datum.poseKeypoints
         self.image = self.datum.cvOutputData
-        if network_output.ndim:
-            network_output = network_output[0]
-            self.output_array = []
-            for i in range(len(network_output) - 1):
-                self.output_array.append(np.array((network_output[i][0], network_output[i][1])))
-            self.output.append(self.output_array)
-        else:
-            self.image = cv2.putText(self.image, "No Pose detected", (int(0.75 *self.CAMERA_RESOLUTION_WIDTH), int(self.CAMERA_RESOLUTION_HEIGHT * 0.05)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        if network_output is not None:
+            if network_output.ndim:
+                network_output = network_output[0]
+                self.output_array = []
+                for i in range(len(network_output)):
+                    self.output_array.append(np.array((network_output[i][0], network_output[i][1])))
+                self.output.append(self.output_array)
+            else:
+                self.image = cv2.putText(self.image, "No Pose detected", (int(0.75 *self.CAMERA_RESOLUTION_WIDTH), int(self.CAMERA_RESOLUTION_HEIGHT * 0.05)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
         
 
 
@@ -111,6 +121,9 @@ class OpenposeWebcam:
     
 
     def rep_counter(self):
+        if len(self.angle_values) == 0:
+            return self.counter
+        
         self.attention = ""
         self.image = cv2.putText(self.image, f"Exercise detected: {self.exercise}", (int(self.CAMERA_RESOLUTION_WIDTH * 0.01), int(self.CAMERA_RESOLUTION_HEIGHT * 0.05)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2, cv2.LINE_AA)
         if self.exercise == 'dumbell-curl':
@@ -182,12 +195,21 @@ class OpenposeWebcam:
         
 
 
+    def detect_exercise(self):
+        print(len(self.output))
+        if len(self.output)>=10:
+            keypoints = [ np.array(output).flatten() for output in self.output[-10:] ]
+            self.output = self.output[-10:]
+            self.prediction = self.model.predict( np.array([keypoints]) )
+            self.image = cv2.putText(self.image, f"Prediction: {self.prediction}", (int(self.CAMERA_RESOLUTION_WIDTH * 0.01), int(self.CAMERA_RESOLUTION_HEIGHT * 0.2)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2, cv2.LINE_AA)
 
+        return
 
     def run(self):
         while(cv2.waitKey(1) != ord('q')):
             self.capture_image()
             self.process_keypoints()
+            self.detect_exercise()
             self.angle_list()
             self.rep_counter()
             cv2.imshow("Output OpenPose", self.image)

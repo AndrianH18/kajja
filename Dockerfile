@@ -14,7 +14,7 @@ libgoogle-glog-dev libboost-all-dev libhdf5-dev libatlas-base-dev
 
 
 #for python api
-RUN pip3 install numpy opencv-python 
+RUN pip3 install tensorflow==2.4.0 opencv-python
 
 #replace cmake as old version has CUDA variable bugs
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.16.0/cmake-3.16.0-Linux-x86_64.tar.gz && \
@@ -29,4 +29,11 @@ RUN git clone https://github.com/CMU-Perceptual-Computing-Lab/openpose.git .
 #build it
 WORKDIR /openpose/build
 RUN cmake -DBUILD_PYTHON=ON .. && make -j `nproc`
+WORKDIR /openpose/build/python/openpose
+RUN make install
+
+RUN cp ./pyopenpose.cpython-38-x86_64-linux-gnu.so /usr/local/lib/python3.8/dist-packages
+WORKDIR /usr/local/lib/python3.8/dist-packages
+RUN ln -s pyopenpose.cpython-38-x86_64-linux-gnu.so pyopenpose
+ENV LD_LIBRARY_PATH=/openpose/build/python/openpose
 WORKDIR /openpose
