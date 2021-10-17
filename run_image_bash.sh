@@ -19,10 +19,10 @@ docker run -it --rm \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     --env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
-    --volume="/home/damedane/hackathon:/hackathon" \
+    --volume="/<path_to_repo>:/hackathon" \
     --net=host \
     --privileged \
     --runtime=nvidia \
     --gpus all\
-    openpose:cuda11 \
+    nelsenew/openpose:cuda11 \
     bash
