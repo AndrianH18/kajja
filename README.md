@@ -4,7 +4,7 @@
 Kajja, is a high-tech, state-of-the-art AI personal trainer. Using an advanced pose estimation model, our system allows real-time guidance and correction of exercises. With ESP32-cameras, each costing under <b>$7</b>.
 
 * [Demonstration video](video/detection.mp4)
-
+* [Pitch Deck](https://youtu.be/XICYCCUX95o)
 
 ![Exercise 1](gif/Exercise_1.gif)
 
