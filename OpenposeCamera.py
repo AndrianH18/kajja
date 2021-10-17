@@ -199,9 +199,11 @@ class OpenposeWebcam:
         if len(self.output)>=20:
             keypoints = [ np.array(output).flatten() for output in self.output[-20:] ]
             self.output = self.output[-20:]
-            self.prediction = self.model.predict( np.array([keypoints]) )
-            self.image = cv2.putText(self.image, f"Prediction: {self.prediction}", (int(self.CAMERA_RESOLUTION_WIDTH * 0.01), int(self.CAMERA_RESOLUTION_HEIGHT * 0.2)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2, cv2.LINE_AA)
+            self.prediction = self.model.predict_classes( np.array([keypoints]) )[0]
 
+            output_class = {0: 'Curl', 1: 'Push-up', 2: 'Squat', 3: 'None'}
+            self.prediction = output_class[self.prediction]
+            self.image = cv2.putText(self.image, f"Prediction: {self.prediction}", (int(self.CAMERA_RESOLUTION_WIDTH * 0.01), int(self.CAMERA_RESOLUTION_HEIGHT * 0.2)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2, cv2.LINE_AA)
         return
 
     def run(self):
