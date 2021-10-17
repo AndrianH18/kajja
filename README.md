@@ -18,43 +18,27 @@ Kajja, is a high-tech, state-of-the-art AI personal trainer. Using an advanced p
 ### About
 Kajja is built from ground up keeping user experience in mind to improve users health. Kajja can detect the poses using [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) what exercise the user is doing with the use of Time delay Neural Network (TDNN). We help our users keep track of their fitness and exercise, all with a single touch of a button. Kajja keeps track of how many sets and repetitions of whatever type of exercise, without needing our users to interface with any UI.
 
-# Usage
-Currently to launch the server, it requires the system to have [nvida docker](https://www.docker.com/) running in the system as well as the use of a docker container for the server to run
+### Usage
+Currently to launch the server, it requires the system to have [nvidia docker](https://www.docker.com/) running in the system as well as the use of a docker container for the server to run
 
 ```bash
 docker pull nelsenew/openpose:cuda11
 ```
 
-To run the docker container with GPU and GUI access use the following bash command:
+To run the docker container with GPU and GUI access, run the following shell script:
 ```bash
-XAUTH=/tmp/.docker.xauth
-
-xauth_list=$(xauth nlist :0 | tail -n 1 | sed -e 's/^..../ffff/')
-if [ ! -f $XAUTH ]; then
-    if [ ! -z "$xauth_list" ]; then
-        echo $xauth_list | xauth -f $XAUTH nmerge -
-    else
-        touch $XAUTH
-    fi
-    chmod a+r $XAUTH
-fi
-
-file $XAUTH
-ls -FAlh $XAUTH
-
-docker run -it --rm \
-    --env="DISPLAY=$DISPLAY" \
-    --env="QT_X11_NO_MITSHM=1" \
-    --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
-    --env="XAUTHORITY=$XAUTH" \
-    --volume="$XAUTH:$XAUTH" \
-    --net=host \
-    --privileged \
-    --runtime=nvidia \
-    --gpus all\
-    nelsenew/openpose:cuda11 \
-    bash
+cd <path_to_this_repo>
+./run_image_bash.sh
 ```
+
+Before running this shell script, please modify line 22 to match the path to this repository in your local machine.  
+
+Once you are inside the interactive terminal of the Docker container, run `OpenposeCamera.py`:
+```bash
+python3 OpenposeCamera.py
+```
+
+This assumes that the ESP32-CAM is up and running, and streaming camera image via WiFi.
 
 ### Problems
 * Obesity - a serious worldwide health issue.
