@@ -64,7 +64,7 @@ class OpenposeWebcam:
         self.flag_max = False
         self.flag_min = False 
         self.angle_dev = 7 #in degrees
-        self.model =  load_model('detector/models/best.pb')
+        self.model =  load_model('detector/models/best')
         self.prediction = 'squat'
         
 
@@ -196,10 +196,9 @@ class OpenposeWebcam:
 
 
     def detect_exercise(self):
-        print(len(self.output))
-        if len(self.output)>=10:
-            keypoints = [ np.array(output).flatten() for output in self.output[-10:] ]
-            self.output = self.output[-10:]
+        if len(self.output)>=20:
+            keypoints = [ np.array(output).flatten() for output in self.output[-20:] ]
+            self.output = self.output[-20:]
             self.prediction = self.model.predict( np.array([keypoints]) )
             self.image = cv2.putText(self.image, f"Prediction: {self.prediction}", (int(self.CAMERA_RESOLUTION_WIDTH * 0.01), int(self.CAMERA_RESOLUTION_HEIGHT * 0.2)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2, cv2.LINE_AA)
 

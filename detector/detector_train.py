@@ -105,7 +105,7 @@ def evaluate_model(trainX, trainy, testX, testy):
 	model.fit(trainX, trainy, epochs=epochs, batch_size=batch_size, verbose=verbose)
 	# evaluate model
 	_, accuracy = model.evaluate(testX, testy, batch_size=batch_size, verbose=1)
-	model.save(f'models/{accuracy}.pb')
+	model.save(f'models/{accuracy}')
 	return accuracy
  
 # summarize scores
